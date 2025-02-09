@@ -137,9 +137,9 @@ func Errors(a, b, c int) error {
 
 // Задание 10. Тестирование HTTP-сервера
 type Task struct {
-	ID   int    `json:id`
-	Name string `json:name`
-	Done bool   `json:done`
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Done bool   `json:"done"`
 }
 
 var Tasks = []Task{
