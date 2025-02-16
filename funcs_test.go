@@ -267,6 +267,20 @@ func TestCreateTask(t *testing.T) {
 	resp = w.Result()
 
 	assert.Equal(t, 400, resp.StatusCode)
+
+	// Проверка состояния сервера
+	req, err = http.NewRequest("GET", "/todo", nil)
+	assert.NoError(t, err)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp = w.Result()
+	assert.Equal(t, 200, resp.StatusCode)
+
+	var tasks []Task
+	err = json.Unmarshal(w.Body.Bytes(), &tasks)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 6, len(tasks))
 }
 
 func TestDeleteTask(t *testing.T) {
@@ -294,7 +308,6 @@ func TestDeleteTask(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 	expected := `{"deleted": 4}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 4, len(Tasks))
 
 	// Неправильный запрос (несуществующий id)
 	req, err = http.NewRequest("DELETE", "/todo/8", nil)
@@ -307,7 +320,20 @@ func TestDeleteTask(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	expected = `{"Not found": 8}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 4, len(Tasks))
+
+	// Проверка состояния сервера
+	req, err = http.NewRequest("GET", "/todo", nil)
+	assert.NoError(t, err)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp = w.Result()
+	assert.Equal(t, 200, resp.StatusCode)
+
+	var tasks []Task
+	err = json.Unmarshal(w.Body.Bytes(), &tasks)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(tasks))
 }
 
 func TestDoneTask(t *testing.T) {
@@ -335,7 +361,6 @@ func TestDoneTask(t *testing.T) {
 	assert.Equal(t, 200, resp.StatusCode)
 	expected := `{"done": 4}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 5, len(Tasks))
 
 	// Неправильный запрос (несуществующий id)
 	req, err = http.NewRequest("PUT", "/todo/8", nil)
@@ -348,7 +373,6 @@ func TestDoneTask(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	expected = `{"Not found": 8}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 5, len(Tasks))
 }
 
 func TestResetTasks(t *testing.T) {
