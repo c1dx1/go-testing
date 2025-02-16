@@ -81,7 +81,6 @@ func (o *OrderTracker) TrackOrder(orderID int) (string, error) {
 }
 
 // Задание 7. Тестирование времени
-
 type RateLimiter struct {
 	lastExecution time.Time
 	timeProvider  TimeProvider
