@@ -1,13 +1,13 @@
-package tests
+package go_testing
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go-testing/funcs"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -20,16 +20,16 @@ import (
 func TestBasicFunc(t *testing.T) {
 	a := 2
 	b := 6
-	assert.Equal(t, a+b, funcs.BasicFunc(a, b))
+	assert.Equal(t, a+b, BasicFunc(a, b))
 }
 
 // Задание 2. Тестирование ошибок
 func TestFuncWithError(t *testing.T) {
-	result, err := funcs.FuncWithError(10, 2)
+	result, err := FuncWithError(10, 2)
 	assert.NoError(t, err, "Error should be nil")
 	assert.Equal(t, 5, result)
 
-	_, err = funcs.FuncWithError(10, 0)
+	_, err = FuncWithError(10, 0)
 	assert.Error(t, err, "Error should not be nil")
 	assert.EqualError(t, err, "divided by zero")
 }
@@ -38,21 +38,21 @@ func TestFuncWithError(t *testing.T) {
 func TestFuncEvenSlice(t *testing.T) {
 	input := []int{1, 2, 3, 4, 5, 6}
 	expected := []int{2, 4, 6}
-	result := funcs.FuncEvenSlice(input)
+	result := FuncEvenSlice(input)
 	assert.Equal(t, expected, result)
 }
 
 func TestFuncCountLettersMap(t *testing.T) {
 	input := "hello world"
 	expected := map[string]int{"h": 1, "l": 3, "e": 1, "o": 2, "w": 1, "r": 1, "d": 1}
-	result := funcs.FuncCountLettersMap(input)
+	result := FuncCountLettersMap(input)
 	assert.Equal(t, expected, result)
 }
 
 // Задание 4. Использование подпакета testing/quick
 func TestReverseStringQuick(t *testing.T) {
 	f := func(s string) bool {
-		return funcs.ReverseString(funcs.ReverseString(s)) == s
+		return ReverseString(ReverseString(s)) == s
 	}
 
 	if err := quick.Check(f, nil); err != nil {
@@ -61,18 +61,35 @@ func TestReverseStringQuick(t *testing.T) {
 }
 
 // Задание 5. Тестирование HTTP-обработчика
-func TestBasicHTTPResponse(t *testing.T) {
-	req := httptest.NewRequest("GET", "/", nil)
+func TestBasicHTTPResponseWithBlankTarget(t *testing.T) {
+	target := "/"
+	req := httptest.NewRequest("GET", target, nil)
 	w := httptest.NewRecorder()
 
-	funcs.BasicHTTPResponse(w, req)
+	BasicHTTPResponse(w, req)
 
 	resp := w.Result()
 	defer resp.Body.Close()
 
 	assert.Equal(t, resp.StatusCode, 200)
 
-	expected := `{"message":"Hello World"}` + "\n"
+	expected := fmt.Sprintf("{\"message\":\"Hello World\",\"requested\":\"%s\"}\n", target)
+	assert.Equal(t, expected, w.Body.String())
+}
+
+func TestBasicHTTPResponseWithNotBlankTarget(t *testing.T) {
+	target := "/success"
+	req := httptest.NewRequest("GET", target, nil)
+	w := httptest.NewRecorder()
+
+	BasicHTTPResponse(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	assert.Equal(t, resp.StatusCode, 200)
+
+	expected := fmt.Sprintf("{\"message\":\"Hello World\",\"requested\":\"%s\"}\n", target)
 	assert.Equal(t, expected, w.Body.String())
 }
 
@@ -93,7 +110,7 @@ func TestTrackOrder(t *testing.T) {
 	mockService.On("GetOrderStatus", 2302).Return("Delivered", nil)
 	mockService.On("GetOrderStatus", 2303).Return("", errors.New("order not found"))
 
-	orderTracker := &funcs.OrderTracker{Service: mockService}
+	orderTracker := &OrderTracker{Service: mockService}
 
 	status, err := orderTracker.TrackOrder(2301)
 	assert.Equal(t, status, "Shipped")
@@ -127,7 +144,7 @@ func TestRateLimiter(t *testing.T) {
 	// Один вызов для создания NewRateLimiter и два для работы внутри функции
 	mockTimeProvider.On("Now").Return(currentTime).Times(3)
 
-	limiter := funcs.NewRateLimiter(mockTimeProvider)
+	limiter := NewRateLimiter(mockTimeProvider)
 
 	canExecute, err := limiter.CanExecute()
 	assert.True(t, canExecute)
@@ -152,7 +169,7 @@ func TestRateLimiter(t *testing.T) {
 
 // Задание 8. Тестирование конкурентности
 func TestSafeCounter(t *testing.T) {
-	var counter funcs.SafeCounter
+	var counter SafeCounter
 	var wg sync.WaitGroup
 
 	const goroutines = 50
@@ -177,21 +194,21 @@ func TestSafeCounter(t *testing.T) {
 // Задание 9. Тестирование конкретной ошибки
 func TestErrors(t *testing.T) {
 	a, b, c := 1, 1, 1
-	err := funcs.Errors(a, b, c)
+	err := Errors(a, b, c)
 	assert.NoError(t, err)
 
 	a = 2
-	err = funcs.Errors(a, b, c)
+	err = Errors(a, b, c)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "a")
 
 	c = 2
-	err = funcs.Errors(a, b, c)
+	err = Errors(a, b, c)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "b")
 
 	a, b = 3, 3
-	err = funcs.Errors(a, b, c)
+	err = Errors(a, b, c)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "c")
 }
@@ -200,7 +217,7 @@ func TestErrors(t *testing.T) {
 func TestGetTasks(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	r := funcs.TaskServer()
+	r := TaskServer()
 
 	req, err := http.NewRequest("GET", "/todo", nil)
 	assert.NoError(t, err)
@@ -210,7 +227,7 @@ func TestGetTasks(t *testing.T) {
 
 	assert.Equal(t, 200, resp.StatusCode)
 
-	var tasks []funcs.Task
+	var tasks []Task
 	err = json.Unmarshal(w.Body.Bytes(), &tasks)
 
 	assert.NoError(t, err)
@@ -219,10 +236,10 @@ func TestGetTasks(t *testing.T) {
 
 func TestCreateTask(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	r := funcs.TaskServer()
+	r := TaskServer()
 
 	// С правильным запросом
-	newTask := funcs.Task{Name: "DevOps fundamentals", Done: false}
+	newTask := Task{Name: "DevOps fundamentals", Done: false}
 	body, err := json.Marshal(newTask)
 	assert.NoError(t, err)
 
@@ -235,7 +252,7 @@ func TestCreateTask(t *testing.T) {
 
 	assert.Equal(t, 201, resp.StatusCode)
 
-	var task funcs.Task
+	var task Task
 	err = json.Unmarshal(w.Body.Bytes(), &task)
 	assert.NoError(t, err)
 
@@ -254,21 +271,30 @@ func TestCreateTask(t *testing.T) {
 
 func TestDeleteTask(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	r := funcs.TaskServer()
+	r := TaskServer()
 
-	// Правильный запрос
-	req, err := http.NewRequest("DELETE", "/todo/4", nil)
+	// Ошибка при atoi
+	req, err := http.NewRequest("DELETE", "/todo/five", nil)
 	assert.NoError(t, err)
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	resp := w.Result()
 
+	assert.Equal(t, 400, resp.StatusCode)
+
+	// Правильный запрос
+	req, err = http.NewRequest("DELETE", "/todo/4", nil)
+	assert.NoError(t, err)
+
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp = w.Result()
+
 	assert.Equal(t, 200, resp.StatusCode)
 	expected := `{"deleted": 4}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 4, len(funcs.Tasks))
-	// Если запускать тесты по-отдельности, то пройдет. Если запускать весь файл сразу, то не пройдет из-за теста CreateTask
+	assert.Equal(t, 4, len(Tasks))
 
 	// Неправильный запрос (несуществующий id)
 	req, err = http.NewRequest("DELETE", "/todo/8", nil)
@@ -281,7 +307,58 @@ func TestDeleteTask(t *testing.T) {
 	assert.Equal(t, 400, resp.StatusCode)
 	expected = `{"Not found": 8}` + "\n"
 	assert.JSONEq(t, expected, w.Body.String())
-	assert.Equal(t, 4, len(funcs.Tasks))
+	assert.Equal(t, 4, len(Tasks))
 }
 
-// DoneTask то же самое, что и DeleteTask по тестам.
+func TestDoneTask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := TaskServer()
+
+	// Ошибка при atoi
+	req, err := http.NewRequest("PUT", "/todo/five", nil)
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp := w.Result()
+
+	assert.Equal(t, 400, resp.StatusCode)
+
+	// Правильный запрос
+	req, err = http.NewRequest("PUT", "/todo/4", nil)
+	assert.NoError(t, err)
+
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp = w.Result()
+
+	assert.Equal(t, 200, resp.StatusCode)
+	expected := `{"done": 4}` + "\n"
+	assert.JSONEq(t, expected, w.Body.String())
+	assert.Equal(t, 5, len(Tasks))
+
+	// Неправильный запрос (несуществующий id)
+	req, err = http.NewRequest("PUT", "/todo/8", nil)
+	assert.NoError(t, err)
+
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	resp = w.Result()
+
+	assert.Equal(t, 400, resp.StatusCode)
+	expected = `{"Not found": 8}` + "\n"
+	assert.JSONEq(t, expected, w.Body.String())
+	assert.Equal(t, 5, len(Tasks))
+}
+
+func TestResetTasks(t *testing.T) {
+	resetTasks()
+
+	expectedTasks := []Task{{ID: 1, Name: "GIT", Done: true},
+		{ID: 2, Name: "Computer Networks", Done: true},
+		{ID: 3, Name: "Databases fundamentals", Done: true},
+		{ID: 4, Name: "Go databases", Done: true},
+		{ID: 5, Name: "Go testing", Done: false}}
+
+	assert.Equal(t, expectedTasks, Tasks)
+}

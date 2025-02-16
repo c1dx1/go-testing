@@ -1,4 +1,4 @@
-package funcs
+package go_testing
 
 import (
 	"encoding/json"
@@ -56,7 +56,7 @@ func ReverseString(s string) string {
 
 // Задание 5. Тестирование HTTP-обработчика
 func BasicHTTPResponse(w http.ResponseWriter, r *http.Request) {
-	response := map[string]interface{}{"message": "Hello World"}
+	response := map[string]interface{}{"message": "Hello World", "requested": r.URL.Path}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(response)
@@ -142,13 +142,7 @@ type Task struct {
 	Done bool   `json:"done"`
 }
 
-var Tasks = []Task{
-	{ID: 1, Name: "GIT", Done: true},
-	{ID: 2, Name: "Computer Networks", Done: true},
-	{ID: 3, Name: "Databases fundamentals", Done: true},
-	{ID: 4, Name: "Go databases", Done: true},
-	{ID: 5, Name: "Go testing", Done: false},
-}
+var Tasks []Task
 
 func GetTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, Tasks)
@@ -191,10 +185,10 @@ func DoneTask(c *gin.Context) {
 		return
 	}
 
-	for _, t := range Tasks {
-		if t.ID == id {
-			t.Done = true
-			c.JSON(http.StatusOK, gin.H{"done": t.ID})
+	for i := range Tasks {
+		if Tasks[i].ID == id {
+			Tasks[i].Done = true
+			c.JSON(http.StatusOK, gin.H{"done": Tasks[i].ID})
 			return
 		}
 	}
@@ -202,7 +196,16 @@ func DoneTask(c *gin.Context) {
 	c.JSON(http.StatusBadRequest, gin.H{"Not found": id})
 }
 
+func resetTasks() {
+	Tasks = []Task{{ID: 1, Name: "GIT", Done: true},
+		{ID: 2, Name: "Computer Networks", Done: true},
+		{ID: 3, Name: "Databases fundamentals", Done: true},
+		{ID: 4, Name: "Go databases", Done: true},
+		{ID: 5, Name: "Go testing", Done: false}}
+}
+
 func TaskServer() *gin.Engine {
+	resetTasks()
 	router := gin.Default()
 	router.GET("/todo", GetTasks)
 	router.PUT("/todo/:id", DoneTask)
